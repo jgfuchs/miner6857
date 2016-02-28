@@ -1,0 +1,11 @@
+[package]
+name = "miner"
+version = "0.1.0"
+authors = ["Julian Fuchs <jfuchs@mit.edu>"]
+
+[dependencies]
+rust-crypto = "0.2.34"
+time = "0.1.34"
+rand = "0.3"
+rustc-serialize = "0.3"
+byteorder = "0.4.2"
