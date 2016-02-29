@@ -26,13 +26,12 @@ macro_rules! println_stderr(
 );
 
 // Hardcoded constants:
-//      d = 42, N = 2^d = 2^42
 //      alpha = 1/3
 //      beta = 2/3
 //      gamma = (1 - alpha)/2 = 1/3
 
 // all exponents: real value = 2^x
-const D: u64 = 32;
+const D: u64 = 44;
 const A: u64 = D / 3;
 const B: u64 = D * 2 / 3;
 const C: u64 = D / 3;

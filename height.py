@@ -11,7 +11,6 @@ i = sys.argv[1]
 h = 0
 
 while True:
-    print(i)
     r = requests.get("http://6857coin.csail.mit.edu:8080/block/{}".format(i))
     try:
         b = json.loads(r.text)
@@ -20,4 +19,4 @@ while True:
     except:
         break
 
-print("Height: {}".format(h))
+print("{}".format(h))
