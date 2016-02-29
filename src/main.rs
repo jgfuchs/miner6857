@@ -32,7 +32,7 @@ macro_rules! println_stderr(
 //      gamma = (1 - alpha)/2 = 1/3
 
 // all exponents: real value = 2^x
-const D: u64 = 44;
+const D: u64 = 32;
 const A: u64 = D / 3;
 const B: u64 = D * 2 / 3;
 const C: u64 = D / 3;
@@ -40,8 +40,9 @@ const C: u64 = D / 3;
 // x & MOD_MASK == x % 2^d
 const MOD_MASK: u64 = (1 << D) - 1;
 
-const NTHREADS_1: usize = 2;
-const NTHREADS_2: usize = 4;
+const NTHREADS_1: usize = 2;    // building chains
+const NTHREADS_2: usize = 2;    // finding 2-collisions
+const NTHREADS_3: usize = 2;    // finding 3-collisions
 
 fn main() {
     if env::args().count() != 2 {
@@ -54,7 +55,52 @@ fn main() {
 
     println_stderr!("Difficulty = {}, α = {}, β = {}, γ = {}", D, A, B, C);
 
-    find_2_collisions(&data);
+    let preimg = find_2_collisions(&data);
+    find_3_collisions(preimg, &data);
+}
+
+fn find_3_collisions(preimg: HashMap<u64, (u64, u64)>, data: &Vec<u8>) {
+    let nb = 1 << (B + 1);
+
+    println_stderr!("Looking for 3-collisions...");
+    let start = time::precise_time_s();
+
+    let preimg = Arc::new(preimg);
+    let mut threads = Vec::new();
+
+    for _ in 0..NTHREADS_3 {
+        let preimg = preimg.clone();
+        let mut data = data.clone();
+
+        let t = thread::spawn(move ||{
+            let scratch: &mut[u8] = &mut data;
+            let mut a = rand_nonce();
+
+            for _ in 0..(nb/NTHREADS_3) {
+                let b = calc_hash(scratch, a);
+
+                if preimg.contains_key(&b) {
+                    let (p1, p2) = preimg[&b];
+                    if a != p1 && a != p2 {
+                        println!("{} {} {}", a, p1, p2);
+                        std::process::exit(0);
+                    }
+                }
+
+                a += 1;
+            }
+        });
+
+        threads.push(t);
+    }
+
+    for t in threads {
+        t.join().unwrap();
+    }
+
+    let end = time::precise_time_s();
+
+    println_stderr!("\tdone (time: {:.4} s)", end - start);
 }
 
 fn find_2_collisions(templ: &Vec<u8>) -> HashMap<u64, (u64, u64)> {
@@ -67,7 +113,7 @@ fn find_2_collisions(templ: &Vec<u8>) -> HashMap<u64, (u64, u64)> {
     let end = time::precise_time_s();
     println_stderr!("\tdone (time: {:.4} s)", end - start);
 
-    println_stderr!("Looking for 2-collisions...");
+    println_stderr!("Looking for {} 2-collisions...", na);
     let start = time::precise_time_s();
     let preimg = collide_chains(chains, na, nc, &templ);
     let end = time::precise_time_s();
@@ -85,10 +131,11 @@ fn make_chains(na: usize, nc: usize, data: &Vec<u8>) -> HashMap<u64, u64> {
 
     for _ in 0..NTHREADS_1 {
         let tx = tx.clone();
-        let data = data.clone();
+        let mut data = data.clone();
 
         let t = thread::spawn(move || {
-            let scratch: &mut [u8] = &mut (data.clone());
+            let scratch: &mut [u8] = &mut data;
+
             for _ in 0..(na / NTHREADS_1) {
                 let start = rand_nonce();
                 let mut a = start;
@@ -116,7 +163,9 @@ fn make_chains(na: usize, nc: usize, data: &Vec<u8>) -> HashMap<u64, u64> {
     chains
 }
 
-fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8>) -> HashMap<u64, (u64,  u64)> {
+fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8>)
+    -> HashMap<u64, (u64,  u64)> {
+
     let chains = Arc::new(chains);
     let nfound = Arc::new(AtomicUsize::new(0));
 
@@ -125,7 +174,7 @@ fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8
 
     for _ in 0..NTHREADS_2 {
         let chains = chains.clone();
-        let data = data.clone();
+        let mut data = data.clone();
         let tx = tx.clone();
         let nfound = nfound.clone();
 
@@ -135,7 +184,7 @@ fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8
                     break;
                 }
 
-                let scratch: &mut [u8] = &mut data.clone();
+                let scratch: &mut [u8] = &mut data;
 
                 let mut a = rand_nonce();
                 let mut b = a;
@@ -179,11 +228,12 @@ fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8
             } else {
                 if p1 != pre1 && p1 != pre2 {
                     println!("{} {} {}", pre1, pre2, p1);
+                    std::process::exit(0);
                 }
                 if p2 != pre1 && p2 != pre2 {
                     println!("{} {} {}", pre1, pre2, p2);
+                    std::process::exit(0);
                 }
-                std::process::exit(0);
             }
         }
 
@@ -202,8 +252,8 @@ fn collide_chains(chains: HashMap<u64, u64>, na: usize, nc: usize, data: &Vec<u8
     preimg
 }
 
-// inserts the nonce into the data template, and
-// returns the SHA256 hash of that (mod 2^42)
+// insert the nonce into the data template, and
+// return the SHA256 hash of that (mod 2^42)
 fn calc_hash(buf: &mut [u8], nonce: u64) -> u64 {
     assert!(buf.len() == 89);
 
