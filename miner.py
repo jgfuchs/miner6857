@@ -81,14 +81,30 @@ def make_block(next_info, contents):
     """
     block = {
         "version": next_info["version"],
-        #   for now, root is hash of block contents (team name)
         "root": hash_to_hex(contents),
         "parentid": next_info["parentid"],
-        #   nanoseconds since unix epoch
+        # give ourselves 40 minutes
         "timestamp": long((time.time() + 40 * 60) * (1000**3)),
         "difficulty": next_info["difficulty"]
     }
     return block
+
+def hash_block_to_hex(b):
+    """Computes the hex-encoded hash of a block header."""
+    packed_data = []
+    packed_data.extend(b["parentid"].decode('hex'))
+    packed_data.extend(b["root"].decode('hex'))
+    packed_data.extend(pack('>Q', long(b["difficulty"])))
+    packed_data.extend(pack('>Q', long(b["timestamp"])))
+    for n in b["nonces"]:
+        packed_data.extend(pack('>Q', long(n)))
+    packed_data.append(chr(b["version"]))
+    if len(packed_data) != 105:
+        print "invalid length of packed data"
+    h = H()
+    h.update(''.join(packed_data))
+    b["hash"] = h.digest().encode('hex')
+    return b["hash"]
 
 
 def hash_to_hex(data):

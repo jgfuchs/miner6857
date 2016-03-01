@@ -81,6 +81,7 @@ fn find_3_collisions(preimg: HashMap<u64, (u64, u64)>, data: &Vec<u8>) {
                 if preimg.contains_key(&b) {
                     let (p1, p2) = preimg[&b];
                     if a != p1 && a != p2 {
+                        println_stderr!("Collision found!!  {} {} {}", a, p1, p2);
                         println!("{} {} {}", a, p1, p2);
                         std::process::exit(0);
                     }
