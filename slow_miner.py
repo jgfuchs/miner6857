@@ -129,8 +129,6 @@ def main():
         print "\nSolving block..."
         print new_block
 
-        print pack_block(new_block).encode('hex')
-
         if solve_block(new_block):
             #   Send to the server
             # add_block(new_block, block_contents)

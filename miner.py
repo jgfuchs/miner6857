@@ -9,58 +9,44 @@ import subprocess
 
 NODE_URL = "http://6857coin.csail.mit.edu:8080"
 
+debug_log = open("debug.log", "w")
+
 
 def calc_nonces(b):
-    hexdata = pack_block(b).encode('hex')
+    hexdata = pack_block(b).encode("hex")
     tries = 0
     while True:
         tries += 1
-        pipe = subprocess.Popen(['./miner', hexdata],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        pipe = subprocess.Popen(["./target/release/miner", hexdata],
+                                stdout=subprocess.PIPE, stderr=debug_log)
         out, err = pipe.communicate()
         nonces = [int(n) for n in out.split()]
         if len(nonces) == 3:
-            print "solved ({}).".format(tries),
+            print "Solved!!  ({} tries)".format(tries)
             sys.stdout.flush()
             return nonces
 
 
 def main():
     block_contents = "jfuchs,mmgong,hcg"
-
-    header0 = {
-        u'timestamp': 0,
-        u'difficulty': 32,
-        u'version': 0,
-        u'parentid': u'169740d5c4711f3cbbde6b9bfbbe8b3d236879d849d1c137660fce9e7884cae7',  # genesis
-        u'nonces': [0, 0, 0],
-        u'root': hash_to_hex(block_contents)
-    }
-
-    header = dict(header0)
-
-    resets = 0
-    count = 0
-
     while True:
-        print "{}|{}: New block... ".format(resets, count),
-        sys.stdout.flush()
+        next_header = get_next()
+        new_header = make_block(next_header, block_contents)
 
-        header['timestamp'] = long(time.time() * (1000**3))
-        header['nonces'] = calc_nonces(header)
+        print "Solving block:"
+        print new_header
 
-        block = {"header": header, "block": block_contents}
+        new_header["nonces"] = calc_nonces(new_header)
+
+        block = {"header": new_header, "block": block_contents}
         r = add_block(block)
-        lastid = hash_block_to_hex(header)
 
         if r.status_code == 200:
-            print "Added successfully ({})".format(lastid)
-            header['parentid'] = hash_block_to_hex(header)
-            count += 1
+            print "Added successfully ({})".format(hash_block_to_hex(header))
         else:
-            print "Server error: {}, {}\n".format(r.status_code, r.text)
-            header = dict(header0)
-            resets += 1
+            print "Failed to add: {}, {}".format(r.status_code, r.text)
+
+        print "\n"
 
 
 def get_next():
@@ -84,41 +70,25 @@ def pack_block(b):
     packed_data.extend(pack('>Q', long(0)))
     packed_data.append(chr(b["version"]))
     if len(packed_data) != 89:
-        print "invalid length of packed data"
+        raise Exception("invalid length of packed data")
     return ''.join(packed_data)
 
 
-def hash_block_nonce_i(b, i):
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    packed_data.extend(pack('>Q', long(b["nonces"][i])))
-    packed_data.append(chr(b["version"]))
-    if len(packed_data) != 89:
-        print "invalid length of packed data"
-    h = H()
-    h.update(''.join(packed_data))
-    return h.digest()
-
-
-def hash_block_to_hex(b):
-    """Computes the hex-encoded hash of a block header."""
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    for n in b["nonces"]:
-        packed_data.extend(pack('>Q', long(n)))
-    packed_data.append(chr(b["version"]))
-    if len(packed_data) != 105:
-        print "invalid length of packed data"
-    h = H()
-    h.update(''.join(packed_data))
-    b["hash"] = h.digest().encode('hex')
-    return b["hash"]
+def make_block(next_info, contents):
+    """
+    Constructs a block from /next header information `next_info` and sepcified
+    contents.
+    """
+    block = {
+        "version": next_info["version"],
+        #   for now, root is hash of block contents (team name)
+        "root": hash_to_hex(contents),
+        "parentid": next_info["parentid"],
+        #   nanoseconds since unix epoch
+        "timestamp": long((time.time() + 40 * 60) * (1000**3)),
+        "difficulty": next_info["difficulty"]
+    }
+    return block
 
 
 def hash_to_hex(data):

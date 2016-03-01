@@ -15,7 +15,7 @@ def calc_nonces(b):
     tries = 0
     while True:
         tries += 1
-        pipe = subprocess.Popen(['./miner', hexdata],
+        pipe = subprocess.Popen(['./target/release/miner', hexdata],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = pipe.communicate()
         nonces = [int(n) for n in out.split()]
@@ -63,11 +63,6 @@ def main():
             resets += 1
 
 
-def get_next():
-    """Parse JSON of the next block info"""
-    return json.loads(urllib2.urlopen(NODE_URL + "/next").read())
-
-
 def add_block(b):
     """Send JSON of solved block to server."""
     r = requests.post(NODE_URL + "/add", data=json.dumps(b))
@@ -86,21 +81,6 @@ def pack_block(b):
     if len(packed_data) != 89:
         print "invalid length of packed data"
     return ''.join(packed_data)
-
-
-def hash_block_nonce_i(b, i):
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    packed_data.extend(pack('>Q', long(b["nonces"][i])))
-    packed_data.append(chr(b["version"]))
-    if len(packed_data) != 89:
-        print "invalid length of packed data"
-    h = H()
-    h.update(''.join(packed_data))
-    return h.digest()
 
 
 def hash_block_to_hex(b):
