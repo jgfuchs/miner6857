@@ -89,6 +89,7 @@ def make_block(next_info, contents):
     }
     return block
 
+
 def hash_block_to_hex(b):
     """Computes the hex-encoded hash of a block header."""
     packed_data = []
