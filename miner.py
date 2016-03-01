@@ -15,7 +15,7 @@ def calc_nonces(b):
     tries = 0
     while True:
         tries += 1
-        pipe = subprocess.Popen(['./search', hexdata],
+        pipe = subprocess.Popen(['./miner', hexdata],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = pipe.communicate()
         nonces = [int(n) for n in out.split()]
@@ -130,4 +130,3 @@ def hash_to_hex(data):
 
 if __name__ == "__main__":
     main()
-

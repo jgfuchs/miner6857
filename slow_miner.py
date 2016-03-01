@@ -58,8 +58,8 @@ def get_hash(blob, nonce):
 
 
 def find_3collisions(F, N):
-    Na = 2**18
-    Nb = 2**22
+    Na = 2**24
+    Nb = 2**28
 
     print "Building {} table...".format(Na)
     img = [None] * Na
@@ -128,7 +128,7 @@ def main():
         #   Solve the POW
         print "\nSolving block..."
         print new_block
-        
+
         print pack_block(new_block).encode('hex')
 
         if solve_block(new_block):
@@ -175,8 +175,8 @@ def pack_block(b):
     packed_data.extend(b["root"].decode('hex'))
     packed_data.extend(pack('>Q', long(b["difficulty"])))
     packed_data.extend(pack('>Q', long(b["timestamp"])))
-    packed_data.extend(pack('>Q', long(0)))
-    packed_data.append(chr(b["version"]))
+    # packed_data.extend(pack('>Q', long(0)))
+    # packed_data.append(chr(b["version"]))
     if len(packed_data) != (89 - 8 - 1):
         print "invalid length of packed data"
     return ''.join(packed_data)
