@@ -42,7 +42,7 @@ def main():
         r = add_block(block)
 
         if r.status_code == 200:
-            print "Added successfully ({})".format(hash_block_to_hex(header))
+            print "Added successfully ({})".format(hash_block_to_hex(new_header))
         else:
             print "Failed to add: {}, {}".format(r.status_code, r.text)
 
