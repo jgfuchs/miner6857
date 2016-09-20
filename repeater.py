@@ -1,11 +1,12 @@
-import urllib2
-import json
 from hashlib import sha256 as H
-import time
+from lib import *
 from struct import pack, unpack
+import json
 import requests
-import sys
 import subprocess
+import sys
+import time
+import urllib2
 
 NODE_URL = "http://6857coin.csail.mit.edu:8080"
 
@@ -30,7 +31,7 @@ def main():
 
     header0 = {
         u'timestamp': 0,
-        u'difficulty': 32,
+        u'difficulty': 38,
         u'version': 0,
         u'parentid': u'169740d5c4711f3cbbde6b9bfbbe8b3d236879d849d1c137660fce9e7884cae7',  # genesis
         u'nonces': [0, 0, 0],
@@ -61,51 +62,6 @@ def main():
             print "Server error: {}, {}\n".format(r.status_code, r.text)
             header = dict(header0)
             resets += 1
-
-
-def add_block(b):
-    """Send JSON of solved block to server."""
-    r = requests.post(NODE_URL + "/add", data=json.dumps(b))
-    return r
-
-
-def pack_block(b):
-    """Return a binary blob of the info in block b"""
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    packed_data.extend(pack('>Q', long(0)))
-    packed_data.append(chr(b["version"]))
-    if len(packed_data) != 89:
-        print "invalid length of packed data"
-    return ''.join(packed_data)
-
-
-def hash_block_to_hex(b):
-    """Computes the hex-encoded hash of a block header."""
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    for n in b["nonces"]:
-        packed_data.extend(pack('>Q', long(n)))
-    packed_data.append(chr(b["version"]))
-    if len(packed_data) != 105:
-        print "invalid length of packed data"
-    h = H()
-    h.update(''.join(packed_data))
-    b["hash"] = h.digest().encode('hex')
-    return b["hash"]
-
-
-def hash_to_hex(data):
-    """Returns the hex-encoded hash of a byte string."""
-    h = H()
-    h.update(data)
-    return h.digest().encode('hex')
 
 
 if __name__ == "__main__":

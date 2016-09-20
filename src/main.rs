@@ -31,7 +31,7 @@ macro_rules! println_stderr(
 //      gamma = (1 - alpha)/2 = 1/3
 
 // all exponents: real value = 2^x
-const D: u64 = 44;
+const D: u64 = 38;
 const A: u64 = D / 3;
 const B: u64 = D * 2 / 3;
 const C: u64 = D / 3;
@@ -270,3 +270,4 @@ fn calc_hash(buf: &mut [u8], nonce: u64) -> u64 {
 fn rand_nonce() -> u64 {
     rand::random::<u64>() & MOD_MASK
 }
+
